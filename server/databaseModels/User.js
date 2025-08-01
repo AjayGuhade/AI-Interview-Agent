@@ -1,16 +1,41 @@
-// models/User.js
 const mongoose = require('mongoose');
-const { v4: uuidv4 } = require('uuid');
 
 const userSchema = new mongoose.Schema({
-  
-    userId: { type: String, default: uuidv4, unique: true }, // custom unique userId
-  role: { type: String, enum: ["candidate", "admin", "company_Manager"], default: "candidate" },
-  name: String,
-  email: { type: String, unique: true },
-  password: String,
-  createdAt: { type: Date, default: Date.now },
-  lastLogin: Date,
+  UserID: {
+    type: String,
+    unique: true,
+    required: false // optional now since we auto-generate it
+  },
+  RoleID: {
+    type: String,
+    enum: ['candidate', 'manager', 'admin'], // optional validation
+    required: true
+  }
+  ,
+  FirstName: {
+    type: String,
+    required: true
+  },
+  LastName: {
+    type: String
+  },
+  Email: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  Password: {
+    type: String,
+    required: true
+  },
+  CreatedDate: {
+    type: Date,
+    default: Date.now
+  },
+  LastLogin: {
+    type: Date
+  }
 });
 
-module.exports = mongoose.model("User", userSchema);
+const User = mongoose.model('User', userSchema);
+module.exports = User;
