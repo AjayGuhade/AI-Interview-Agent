@@ -22,6 +22,7 @@ import {
   LightBulbIcon
 } from "@heroicons/react/24/outline";
 import { useDropzone } from "react-dropzone";
+import { CompanyAPI, DriveAPI } from "../services/api";
 
 type Company = {
   _id: string;
@@ -114,14 +115,11 @@ export default function CreateDrivePage() {
   const educationOptions = ["B.Tech", "B.E", "M.Tech", "MCA", "BCA", "B.Sc", "M.Sc", "Ph.D"];
   const difficultyOptions: ("easy" | "medium" | "hard")[] = ["easy", "medium", "hard"];
 
+
   useEffect(() => {
     const fetchCompany = async () => {
       try {
-        const response = await fetch("http://localhost:5050/api/companies");
-        if (!response.ok) {
-          throw new Error("Failed to fetch company data");
-        }
-        const companies: Company[] = await response.json();
+        const companies: Company[] = await CompanyAPI.getAllCompanies();
         if (companies.length > 0) {
           setCompany(companies[0]);
           setDriveData(prev => ({
@@ -136,10 +134,10 @@ export default function CreateDrivePage() {
         setIsLoading(false);
       }
     };
-
+  
     fetchCompany();
   }, []);
-
+  
   const validateForm = () => {
     const errors: Record<string, string> = {};
     
@@ -233,6 +231,7 @@ export default function CreateDrivePage() {
     alert("Google Drive connected successfully! You can now access resumes from your Drive.");
   };
 
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
@@ -242,7 +241,6 @@ export default function CreateDrivePage() {
   
     try {
       const formData = new FormData();
-      
       formData.append('CompanyID', driveData.CompanyID);
       formData.append('ProjectName', driveData.ProjectName);
       formData.append('EducationQualification', driveData.EducationQualification);
@@ -254,7 +252,7 @@ export default function CreateDrivePage() {
       formData.append('Link', driveData.Link);
       formData.append('Description', driveData.Description);
       formData.append('WarningExceedCount', driveData.WarningExceedCount.toString());
-      
+  
       formData.append('TechnicalKeySkills', JSON.stringify(driveData.TechnicalKeySkills));
       formData.append('FunctionalKeySkills', JSON.stringify(driveData.FunctionalKeySkills));
       formData.append('Questions', JSON.stringify(driveData.Questions));
@@ -263,19 +261,12 @@ export default function CreateDrivePage() {
         formData.append('resumes', file);
       });
   
-      const response = await fetch("http://localhost:5050/api/drive/upload", {
-        method: "POST",
-        body: formData,
-      });
-  
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to create drive");
-      }
+      // Call API service instead of fetch
+      await DriveAPI.uploadDrive(formData);
   
       setShowSuccessModal(true);
       setTimeout(() => navigate("/drives"), 2000);
-      
+  
     } catch (err) {
       console.error("Error creating drive:", err);
       setError(err instanceof Error ? err.message : "An unknown error occurred");

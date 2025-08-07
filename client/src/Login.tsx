@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { AuthAPI } from "./services/api";
 
 interface FormData {
   firstName: string;
@@ -70,93 +71,57 @@ const AuthPage: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   };
 
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
   
-    if (isLogin) {
-      const payload = {
-        Email: formData.email,
-        Password: formData.password,
-      };
-    
-      try {
-        const res = await fetch("http://localhost:5050/api/users/login", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        });
-    
-        if (!res.ok) {
-          const errData = await res.json();
-          alert(`Login failed: ${errData.error || res.statusText}`);
-          return;
-        }
-    
-        const data = await res.json();
-        console.log("Login success:", data);
-        
+    try {
+      if (isLogin) {
+        // --- LOGIN ---
+        const data = await AuthAPI.login(formData.email, formData.password);
+  
         const user = data.user;
-        
-        localStorage.setItem("user", JSON.stringify({
-          _id: user._id,
-          UserID: user.UserID,
-          RoleID: user.RoleID,
-          FirstName: user.FirstName,
-          LastName: user.LastName,
-          Email: user.Email
-        }));
-        
+        localStorage.setItem(
+          "user",
+          JSON.stringify({
+            _id: user._id,
+            UserID: user.UserID,
+            RoleID: user.RoleID,
+            FirstName: user.FirstName,
+            LastName: user.LastName,
+            Email: user.Email,
+          })
+        );
+  
         alert("Login successful!");
-        
+  
         const role = user.RoleID?.toLowerCase();
-        if (role === "candidate") {
-          navigate("/AiInterviewPage");
-        } else if (role === "admin") {
-          navigate("/dashboard");
-        }
-        const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
-        console.log(storedUser.FirstName);        
-      } catch (error) {
-        console.error("Login error:", error);
-        alert("An error occurred during login. Please try again.");
-      }
-    }
-    else {
-      const payload = {
-        RoleID: "candidate",
-        FirstName: formData.firstName,
-        LastName: formData.lastName,
-        Email: formData.email,
-        Password: formData.password,
-      };
+        if (role === "candidate") navigate("/AiInterviewPage");
+        else if (role === "admin") navigate("/dashboard");
   
-      try {
-        const res = await fetch("http://localhost:5050/api/users/register", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(payload),
-        });
+        console.log("Stored User:", user.FirstName);
+      } 
+      
+      else {
+        // --- REGISTER ---
+        const payload = {
+          RoleID: "candidate",
+          FirstName: formData.firstName,
+          LastName: formData.lastName,
+          Email: formData.email,
+          Password: formData.password,
+        };
   
-        if (!res.ok) {
-          const errData = await res.json();
-          alert(`Registration failed: ${errData.message || res.statusText}`);
-          return;
-        }
-  
-        const data = await res.json();
-        console.log("Registered:", data);
+        const data = await AuthAPI.register(payload);
   
         alert("Registration successful!");
         navigate("/dashboard");
-      } catch (error) {
-        console.error("Registration error:", error);
-        alert("An error occurred during registration. Please try again.");
+        console.log("Registered:", data);
       }
+    } catch (error: any) {
+      console.error("Error:", error.message);
+      alert(error.message || "An error occurred. Please try again.");
     }
   };
   

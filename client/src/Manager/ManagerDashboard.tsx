@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import NewDriveModal from "./NewDriveModal";
+import { DriveAPI } from "../services/api";
 
 // Define TypeScript interfaces
 interface Drive {
@@ -180,41 +181,41 @@ export default function ManagerDashboard() {
     { id: 3, candidate: "Alex Johnson", time: "09:15:33", reason: "Audio input mismatch", severity: "Low" }
   ];
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Fetch active drives
-        const drivesResponse = await fetch('http://localhost:5050/api/project-recruitment');
-        if (!drivesResponse.ok) throw new Error('Failed to fetch drives');
-        const drivesData: Drive[] = await drivesResponse.json();
-        
-        setAllDrives(drivesData);
-        
-        // Calculate statistics
-        const totalCandidates = drivesData.reduce((sum: number, drive: Drive) => 
-          sum + (drive.candidates?.length || 0), 0);
-        const totalInterviews = drivesData.reduce((sum: number, drive: Drive) => 
-          sum + (drive.interviews?.length || 0), 0);
-        
-        setStats({
-          totalInterviews,
-          totalCandidates,
-          cheatingIncidents: cheatingLogs.length,
-          avgScore: 76.5,
-          activeDrives: drivesData.length
-        });
-        
-      } catch (err) {
-        setError(err instanceof Error ? err.message : String(err));
-      } finally {
-        setLoading(false);
-      }
-    };
+  
+useEffect(() => {
+  const fetchData = async () => {
+    try {
+      const drivesData: Drive[] = await DriveAPI.getAllDrives();
+      setAllDrives(drivesData);
 
-    if (activeTab === 'dashboard') {
-      fetchData();
+      // Calculate statistics
+      const totalCandidates = drivesData.reduce(
+        (sum, drive) => sum + (drive.candidates?.length || 0),
+        0
+      );
+      const totalInterviews = drivesData.reduce(
+        (sum, drive) => sum + (drive.interviews?.length || 0),
+        0
+      );
+
+      setStats({
+        totalInterviews,
+        totalCandidates,
+        cheatingIncidents: cheatingLogs.length,
+        avgScore: 76.5,
+        activeDrives: drivesData.length,
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setLoading(false);
     }
-  }, [activeTab]);
+  };
+
+  if (activeTab === "dashboard") {
+    fetchData();
+  }
+}, [activeTab]);
 
   const handleNewDriveClick = () => {
     navigate("/newDrive");

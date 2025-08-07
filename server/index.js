@@ -18,6 +18,10 @@ const cheatingLogRoutes = require('../server/routes/cheatingLogRoutes');
 const uploadRoutes = require("./routes/uploadRoute");
 const nodemailer = require("nodemailer");
 const Applicant = require('./databaseModels/Applicant'); // Adjust path as needed
+const interviewBotRoutes = require('./routes/interviewBotRoutes'); // Add this line
+
+const interviewRouting = require('./routes/interviewRouteing');
+
 const app = express();
 
 
@@ -79,6 +83,8 @@ app.use(bodyParser.urlencoded({ extended: true })); // for parsing application/x
 // app.use('/api', applicantRoutes); // ✅ use route
 app.use("/api/applicants", applicantRoutes);
 app.use("/uploads", express.static("uploads"));
+app.use('/api/applicant', interviewRouting);
+app.use('/api/interview-bot', interviewBotRoutes); // Add this line for interview bot routes
 
 
 

@@ -21,6 +21,8 @@ const applicantSchema = new mongoose.Schema({
   MeetingEndDate: Date,
   Referance: { type: String, enum: ['Naukari', 'CompanyURL', 'Other'] },
   IsApplicable: Boolean,
+  LinkOpenedAt: { type: Date },
+
 });
 
 module.exports = mongoose.model("Applicant", applicantSchema);

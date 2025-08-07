@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { DriveAPI2, ApplicantAPI, EmailAPI } from '../services/api';
 
 interface DriveDetails {
   _id: string;
@@ -69,69 +70,89 @@ export default function DriveDetails() {
     meetingDate: '',
     meetingTime: ''
   });
+  const [sendingAllEmails, setSendingAllEmails] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        
+  
         // Fetch drive details
-        const driveResponse = await fetch(`http://localhost:5050/api/project-recruitment/${id}`);
-        if (!driveResponse.ok) throw new Error('Failed to fetch drive details');
-        const driveData = await driveResponse.json();
+        const driveData = await DriveAPI2.getDriveById(id!);
         setDrive(driveData);
-
-        // Fetch applicants for this drive
-        const applicantsResponse = await fetch(`http://localhost:5050/api/applicants/byRecruitmentDrive/${id}`);
-        if (!applicantsResponse.ok) throw new Error('Failed to fetch applicants');
-        const applicantsData = await applicantsResponse.json();
+  
+        // Fetch applicants
+        const applicantsData = await ApplicantAPI.getApplicantsByDrive(id!);
         setApplicants(applicantsData.applicants || []);
-
+  
       } catch (err) {
         setError(err instanceof Error ? err.message : String(err));
       } finally {
         setLoading(false);
       }
     };
-
+  
     fetchData();
   }, [id]);
-
+  
   const handleSendEmail = async () => {
     if (!selectedApplicant) return;
-
+  
     try {
-      const response = await fetch('http://localhost:5050/api/send-email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          applicantId: selectedApplicant._id,
-          emailData: {
-            subject: emailContent.subject,
-            body: emailContent.body,
-            meetingLink: emailContent.meetingLink,
-            meetingDate: emailContent.meetingDate,
-            meetingTime: emailContent.meetingTime
-          }
-        }),
-      });
-
-      if (!response.ok) throw new Error('Failed to send email');
-      
-      const result = await response.json();
-      alert(result.message || 'Email sent successfully!');
+      const result = await EmailAPI.sendEmail(selectedApplicant._id, emailContent);
+      alert(result.message || "Email sent successfully!");
       setShowEmailModal(false);
     } catch (error) {
-      console.error('Error sending email:', error);
-      alert('Failed to send email');
+      console.error("Error sending email:", error);
+      alert("Failed to send email");
+    }
+  };
+  
+  const handleSendEmailToAll = async () => {
+    if (!applicants.length) return;
+  
+    try {
+      setSendingAllEmails(true);
+      const failedEmails: string[] = [];
+      let successCount = 0;
+  
+      for (const applicant of applicants) {
+        try {
+          await EmailAPI.sendEmail(applicant._id, {
+            subject: `Interview Invitation for ${drive?.ProjectName || "Position"}`,
+            body: `Dear ${applicant.FirstName?.trim() || "Candidate"}, ...`,
+            meetingLink: applicant.MeetingLink || "",
+            meetingDate: applicant.MeetingStartDate
+              ? new Date(applicant.MeetingStartDate).toISOString().split("T")[0]
+              : "",
+            meetingTime: applicant.MeetingStartDate
+              ? new Date(applicant.MeetingStartDate).toTimeString().substring(0, 5)
+              : "",
+          });
+          successCount++;
+        } catch (error) {
+          console.error(`Error sending to ${applicant.Email}:`, error);
+          failedEmails.push(applicant.Email);
+        }
+      }
+  
+      setSendingAllEmails(false);
+      if (failedEmails.length === 0) {
+        alert(`Successfully sent emails to all ${successCount} candidates!`);
+      } else {
+        alert(
+          `Sent to ${successCount} candidates. Failed to send to: ${failedEmails.join(", ")}`
+        );
+      }
+    } catch (error) {
+      setSendingAllEmails(false);
+      console.error("Error in batch email sending:", error);
+      alert("Error sending batch emails");
     }
   };
 
   const handleEmailClick = (applicant: Applicant) => {
     setSelectedApplicant(applicant);
-    // Initialize with template but make all fields editable
     setEmailContent({
       subject: `Interview Invitation for ${drive?.ProjectName || 'Position'}`,
       body: `Dear ${applicant.FirstName?.trim() || 'Candidate'},
@@ -324,7 +345,38 @@ Recruitment Team`,
             {/* Candidates Section */}
             <div className="mt-10">
               <div className="bg-gray-700/50 p-5 rounded-lg">
-                <h2 className="text-xl font-semibold mb-4 text-white">Registered Candidates</h2>
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-semibold text-white">Registered Candidates ({applicants.length})</h2>
+                  {applicants.length > 0 && (
+                    <button
+                      onClick={handleSendEmailToAll}
+                      disabled={sendingAllEmails}
+                      className={`px-4 py-2 rounded-lg flex items-center ${
+                        sendingAllEmails 
+                          ? 'bg-gray-600 text-gray-400' 
+                          : 'bg-green-600 hover:bg-green-500 text-white'
+                      }`}
+                    >
+                      {sendingAllEmails ? (
+                        <>
+                          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Sending...
+                        </>
+                      ) : (
+                        <>
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+                            <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+                          </svg>
+                          Email All
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
                 {applicants.length > 0 ? (
                   <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-600">
@@ -483,22 +535,15 @@ Recruitment Team`,
               </div>
 
               <div className="space-y-4">
-              <div>
-  <label className="block text-sm font-medium text-gray-300 mb-1">To</label>
-  <input
-    type="email"
-    value={selectedApplicant?.Email || ''}
-    onChange={(e) => {
-      if (selectedApplicant) {
-        setSelectedApplicant({
-          ...selectedApplicant,
-          Email: e.target.value
-        });
-      }
-    }}
-    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
-  />
-</div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-1">To</label>
+                  <input
+                    type="email"
+                    value={selectedApplicant.Email}
+                    readOnly
+                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 text-white focus:ring-2 focus:ring-cyan-500 focus:border-transparent"
+                  />
+                </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-1">Subject</label>

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { DriveAPI } from "../services/api"; // adjust path based on your folder structure
 
 interface Company {
   _id: string;
@@ -31,8 +32,8 @@ const DrivesTable: React.FC = () => {
   useEffect(() => {
     const fetchDrives = async () => {
       try {
-        const response = await axios.get("http://localhost:5050/api/project-recruitment");
-        setDrives(response.data);
+        const response = await DriveAPI.getAllDrives();
+        setDrives(response);
       } catch (error) {
         console.error("Failed to fetch drives:", error);
       } finally {

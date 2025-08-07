@@ -4,7 +4,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import './index.css'
 
 import App from './App.tsx'
-import UploadResume from './UploadResume.tsx'
+// import UploadResume from './UploadResume.tsx'
 import AvatarViewer from './AvatarViewer.tsx'
 import AIChat from './Chat.tsx' // ✅ Your new chat page
 import AiInterviewPage from './LandingPage.tsx'
@@ -16,6 +16,7 @@ import CreateDrivePage from './Manager/NewDriveModal.tsx'
 import DriveDetails from './Manager/DriveDetails.tsx'
 import AllDrives from './Manager/AllDrives.tsx'
 import CodeEditor from './CodedEditor.tsx'
+import InterviewEntry from './InterviewEntry.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -36,6 +37,8 @@ createRoot(document.getElementById('root')!).render(
 
         <Route path="/drives" element={<AllDrives />} />
         <Route path="/CodeEditor" element={<CodeEditor />} />
+        <Route path="/meet/:meetingId" element={<InterviewEntry />} />
+        <Route path="/interview/:meetingId" element={<Chat />} />
 
         
       </Routes>

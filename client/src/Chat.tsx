@@ -1,9 +1,12 @@
+
+
 import { useState, useEffect, useRef } from 'react';
 import AIInterviewerVideo from './AIInterviewerVideo';
 // import CheatingDetection from './CheatingDetection';
 import * as faceapi from 'face-api.js';
 import CheatingDetection from './CheatingDetection';
 import AnimatedBackground from './ParticlesBackground';
+import { InterviewAPI } from './services/api';
 
 const SpeechRecognition = typeof window !== 'undefined' && ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
 
@@ -151,68 +154,6 @@ export default function Chat() {
     }
   };
 
-  const handleResumeUpload = async (file: File) => {
-    if (!file) return;
-    
-    setResumeUploading(true);
-    setApiError(null);
-    
-    try {
-      const formData = new FormData();
-      formData.append('resume', file);
-  
-      const uploadResponse = await fetch('http://localhost:5050/api/upload-resume', {
-        method: 'POST',
-        body: formData,
-        credentials: 'include'
-      });
-  
-      if (!uploadResponse.ok) {
-        throw new Error(`Upload failed with status ${uploadResponse.status}`);
-      }
-  
-      const uploadData = await uploadResponse.json();
-      setSessionId(uploadData.sessionId);
-      
-      const chatResponse = await fetch('http://localhost:5050/api/chat', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          sessionId: uploadData.sessionId,
-          answer: "",
-          interviewDuration: 30,
-          currentTimeElapsed: 0
-        }),
-        credentials: 'include'
-      });
-  
-      if (!chatResponse.ok) {
-        const errorData = await chatResponse.json();
-        throw new Error(errorData.error || "Failed to get first question");
-      }
-      
-      const chatData = await chatResponse.json();
-      setCurrentQuestion(chatData.nextQuestion);
-      setPhase('question');
-      
-      setConversation([{ 
-        question: chatData.nextQuestion, 
-        answer: '' 
-      }]);
-
-      // Enter fullscreen when interview starts
-      toggleFullscreen();
-  
-    } catch (error) {
-      console.error("Upload error:", error);
-      setApiError(error instanceof Error ? error.message : 'Unknown error');
-    } finally {
-      setResumeUploading(false);
-    }
-  };
-
   const startVoiceRecording = () => {
     setAnswer('');
     setPhase('recording');
@@ -224,60 +165,75 @@ export default function Chat() {
       setPhase('question');
     }
   };
+  
 
-  const handleSubmit = async () => {
-    if (autoSubmitTimer.current) {
-      clearTimeout(autoSubmitTimer.current);
+  const handleResumeUpload = async (file: File) => {
+    if (!file) return;
+  
+    setResumeUploading(true);
+    setApiError(null);
+  
+    try {
+      const uploadData = await InterviewAPI.uploadResume(file);
+      setSessionId(uploadData.sessionId);
+  
+      const chatData = await InterviewAPI.sendChatAnswer(
+        uploadData.sessionId,
+        "",
+        30,
+        0
+      );
+  
+      setCurrentQuestion(chatData.nextQuestion);
+      setPhase('question');
+      setConversation([{ question: chatData.nextQuestion, answer: '' }]);
+  
+      toggleFullscreen();
+    } catch (error) {
+      console.error("Upload error:", error);
+      setApiError(error instanceof Error ? error.message : 'Unknown error');
+    } finally {
+      setResumeUploading(false);
     }
-
+  };
+  
+  const handleSubmit = async () => {
+    if (autoSubmitTimer.current) clearTimeout(autoSubmitTimer.current);
     if (!answer.trim()) {
       setApiError("Please provide an answer before submitting");
       return;
     }
-
+  
     setLoading(true);
     setApiError(null);
-    
+  
     try {
-      const response = await fetch('http://localhost:5050/api/chat', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          sessionId,
-          answer,
-          interviewDuration: 30,
-          currentTimeElapsed: Math.floor((30 * 60 - timeLeft) / 60)
-        }),
-      });
-
-      if (!response.ok) throw new Error("Failed to get next question");
-
-      const data = await response.json();
-      
+      const data = await InterviewAPI.sendChatAnswer(
+        sessionId!,
+        answer,
+        30,
+        Math.floor((30 * 60 - timeLeft) / 60)
+      );
+  
       const updatedConversation = [...conversation, {
         question: currentQuestion,
         answer
       }];
       setConversation(updatedConversation);
-
+  
       if (data.nextQuestion) {
         setCurrentQuestion(data.nextQuestion);
         setAnswer('');
         setPhase('question');
         endRef.current?.scrollIntoView({ behavior: 'smooth' });
-        
+  
         setTimeout(() => {
-          setConversation(prev => [...prev, {
-            question: data.nextQuestion,
-            answer: ''
-          }]);
+          setConversation(prev => [...prev, { question: data.nextQuestion, answer: '' }]);
         }, 500);
       } else {
         setPhase('complete');
       }
-
+  
     } catch (error) {
       console.error("Error:", error);
       setApiError(`Failed to proceed: ${error instanceof Error ? error.message : 'Unknown error'}`);
