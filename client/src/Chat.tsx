@@ -1,8 +1,6 @@
-
-
 import { useState, useEffect, useRef } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import AIInterviewerVideo from './AIInterviewerVideo';
-// import CheatingDetection from './CheatingDetection';
 import * as faceapi from 'face-api.js';
 import CheatingDetection from './CheatingDetection';
 import AnimatedBackground from './ParticlesBackground';
@@ -10,20 +8,24 @@ import { InterviewAPI } from './services/api';
 
 const SpeechRecognition = typeof window !== 'undefined' && ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
 
-interface ConversationItem {
-  question: string;
-  answer: string;
+interface Message {
+  type: 'intro' | 'question' | 'answer' | 'feedback' | 'complete';
+  content: string;
+  meta?: any;
+  score?: number;
 }
 
-type InterviewPhase = 'upload' | 'question' | 'recording' | 'confirm' | 'complete';
+type InterviewPhase = 'intro' | 'question' | 'recording' | 'confirm' | 'complete';
 
 export default function Chat() {
+  const { meetingId } = useParams();
+  const location = useLocation();
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [resumeUploading, setResumeUploading] = useState(false);
-  const [currentQuestion, setCurrentQuestion] = useState('');
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [currentContent, setCurrentContent] = useState('');
+  const [currentType, setCurrentType] = useState<'intro' | 'question'>('intro');
   const [answer, setAnswer] = useState('');
-  const [conversation, setConversation] = useState<ConversationItem[]>([]);
-  const [phase, setPhase] = useState<InterviewPhase>('upload');
+  const [phase, setPhase] = useState<InterviewPhase>('intro');
   const [loading, setLoading] = useState(false);
   const [timeLeft, setTimeLeft] = useState(30 * 60);
   const [apiError, setApiError] = useState<string | null>(null);
@@ -35,25 +37,39 @@ export default function Chat() {
 
   const endRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const autoSubmitTimer = useRef<NodeJS.Timeout | null>(null);
   const webcamRef = useRef<any>(null);
+  const navigate = useNavigate();
+
+  // Initialize from location state
+  useEffect(() => {
+    if (location.state?.sessionId) {
+      setSessionId(location.state.sessionId);
+      setMessages(location.state.initialMessages);
+      
+      const introMessage = location.state.initialMessages.find(
+        (m: Message) => m.type === 'intro'
+      );
+      if (introMessage) {
+        setCurrentContent(introMessage.content);
+        setCurrentType('intro');
+        setPhase('intro');
+      }
+    }
+  }, [location.state]);
 
   // Load face detection models
   useEffect(() => {
     const loadModels = async () => {
       try {
-        console.log("Loading face detection models...");
         await faceapi.nets.tinyFaceDetector.loadFromUri('/models');
         await faceapi.nets.faceLandmark68Net.loadFromUri('/models');
-        console.log("Models loaded successfully");
         setModelsLoaded(true);
       } catch (err) {
         console.error("Failed to load face detection models:", err);
         setApiError("Failed to initialize proctoring system");
       }
     };
-
     loadModels();
   }, []);
 
@@ -66,18 +82,15 @@ export default function Chat() {
       recognitionRef.current.interimResults = false;
 
       recognitionRef.current.onresult = (e: any) => {
-        let fullTranscript = '';
-        for (let i = 0; i < e.results.length; i++) {
-          fullTranscript += e.results[i][0].transcript + ' ';
-        }
-        setAnswer(fullTranscript.trim());
+        let transcript = Array.from(e.results)
+          .map((result: any) => result[0].transcript)
+          .join(' ');
+        setAnswer(transcript.trim());
         setPhase('confirm');
         recognitionRef.current.stop();
         
         autoSubmitTimer.current = setTimeout(() => {
-          if (phase === 'confirm') {
-            handleSubmit();
-          }
+          if (phase === 'confirm') handleSubmit();
         }, 2000);
       };
 
@@ -89,9 +102,7 @@ export default function Chat() {
     }
 
     return () => {
-      if (autoSubmitTimer.current) {
-        clearTimeout(autoSubmitTimer.current);
-      }
+      if (autoSubmitTimer.current) clearTimeout(autoSubmitTimer.current);
     };
   }, [phase]);
 
@@ -104,26 +115,22 @@ export default function Chat() {
   // Tab switching detection
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.hidden && phase !== 'upload' && phase !== 'complete') {
+      if (document.hidden && phase !== 'complete') {
         handleCheatingDetected("Tab switching detected - please stay on the interview page");
       }
     };
-
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [phase]);
 
   // Copy/paste detection
   useEffect(() => {
     const handleCopyPaste = (e: ClipboardEvent) => {
       if ((phase === 'recording' || phase === 'confirm') && !cheatingDetected) {
-        handleCheatingDetected("Copy/paste activity detected - please answer in your own words");
+        handleCheatingDetected("Copy/paste activity detected");
         e.preventDefault();
       }
     };
-
     document.addEventListener('copy', handleCopyPaste);
     document.addEventListener('paste', handleCopyPaste);
     return () => {
@@ -132,8 +139,7 @@ export default function Chat() {
     };
   }, [phase, cheatingDetected]);
 
-  const     handleCheatingDetected = (reason: string) => {
-    console.log("Cheating detected:", reason);
+  const handleCheatingDetected = (reason: string) => {
     setCheatingDetected(true);
     setCheatingReason(reason);
     recognitionRef.current?.stop();
@@ -142,15 +148,11 @@ export default function Chat() {
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(err => {
-        console.error(`Error attempting to enable fullscreen: ${err.message}`);
-      });
+      document.documentElement.requestFullscreen().catch(console.error);
       setIsFullscreen(true);
-    } else {
-      if (document.exitFullscreen) {
-        document.exitFullscreen();
-        setIsFullscreen(false);
-      }
+    } else if (document.exitFullscreen) {
+      document.exitFullscreen();
+      setIsFullscreen(false);
     }
   };
 
@@ -165,38 +167,16 @@ export default function Chat() {
       setPhase('question');
     }
   };
-  
 
-  const handleResumeUpload = async (file: File) => {
-    if (!file) return;
-  
-    setResumeUploading(true);
-    setApiError(null);
-  
-    try {
-      const uploadData = await InterviewAPI.uploadResume(file);
-      setSessionId(uploadData.sessionId);
-  
-      const chatData = await InterviewAPI.sendChatAnswer(
-        uploadData.sessionId,
-        "",
-        30,
-        0
-      );
-  
-      setCurrentQuestion(chatData.nextQuestion);
+  const handleIntroComplete = () => {
+    const firstQuestion = messages.find(m => m.type === 'question');
+    if (firstQuestion) {
+      setCurrentContent(firstQuestion.content);
+      setCurrentType('question');
       setPhase('question');
-      setConversation([{ question: chatData.nextQuestion, answer: '' }]);
-  
-      toggleFullscreen();
-    } catch (error) {
-      console.error("Upload error:", error);
-      setApiError(error instanceof Error ? error.message : 'Unknown error');
-    } finally {
-      setResumeUploading(false);
     }
   };
-  
+
   const handleSubmit = async () => {
     if (autoSubmitTimer.current) clearTimeout(autoSubmitTimer.current);
     if (!answer.trim()) {
@@ -208,32 +188,55 @@ export default function Chat() {
     setApiError(null);
   
     try {
-      const data = await InterviewAPI.sendChatAnswer(
-        sessionId!,
-        answer,
-        30,
-        Math.floor((30 * 60 - timeLeft) / 60)
-      );
-  
-      const updatedConversation = [...conversation, {
-        question: currentQuestion,
+      // Add the answer to messages
+      const updatedMessages: Message[] = [
+        ...messages,
+        { type: 'answer', content: answer }
+      ];
+      setMessages(updatedMessages);
+
+      // Send to API
+      const response = await InterviewAPI.respondToQuestion({
+        sessionId: sessionId!,
         answer
-      }];
-      setConversation(updatedConversation);
-  
-      if (data.nextQuestion) {
-        setCurrentQuestion(data.nextQuestion);
+      });
+
+      console.log('API Response:', response); // Debug log
+
+      // Process API response
+      const newMessages: Message[] = [
+        ...updatedMessages,
+        ...response.messages.map((msg: { type: any; content: any; meta: any; score: any; }) => ({
+          type: msg.type,
+          content: msg.content,
+          ...(msg.meta && { meta: msg.meta }),
+          ...(msg.score && { score: msg.score })
+        }))
+      ];
+
+      setMessages(newMessages);
+
+      // Check if interview is explicitly completed
+      if (response.completed) {
+        setPhase('complete');
+        return;
+      }
+
+      // Find the most recent question (could be after feedback)
+      const nextQuestion = [...newMessages].reverse().find(m => m.type === 'question');
+      
+      if (nextQuestion) {
+        setCurrentContent(nextQuestion.content);
+        setCurrentType('question');
         setAnswer('');
         setPhase('question');
         endRef.current?.scrollIntoView({ behavior: 'smooth' });
-  
-        setTimeout(() => {
-          setConversation(prev => [...prev, { question: data.nextQuestion, answer: '' }]);
-        }, 500);
-      } else {
+      } else if (!response.completed) {
+        // If no question found but interview isn't marked as completed
+        setApiError("No question received - the interview may have ended unexpectedly");
         setPhase('complete');
       }
-  
+
     } catch (error) {
       console.error("Error:", error);
       setApiError(`Failed to proceed: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -245,202 +248,210 @@ export default function Chat() {
 
   const formatTime = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
 
+  if (!sessionId || messages.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-900 text-white">
+        <div className="text-center p-8 bg-gray-800 rounded-lg">
+          <h2 className="text-2xl font-bold mb-4">Session Error</h2>
+          <p className="mb-6">Invalid interview session. Please start again.</p>
+          <button 
+            onClick={() => window.location.href = '/'}
+            className="px-6 py-2 bg-blue-600 rounded-lg hover:bg-blue-700"
+          >
+            Return to Home
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (cheatingDetected) {
+    return (
+      <div className="w-full h-screen flex flex-col items-center justify-center bg-red-900 text-white p-8 text-center">
+        <div className="max-w-2xl">
+          <h1 className="text-4xl font-bold mb-6">⚠️ Cheating Detected</h1>
+          <p className="text-xl mb-4">{cheatingReason}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-white text-red-900 hover:bg-gray-200 px-8 py-3 rounded-lg font-medium text-lg"
+          >
+            Start New Interview
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    // <div className="min-h-screen flex flex-col md:flex-row bg-gray-950 text-white">
-      <div className='min-h-screen flex flex-col md:flex-row text-white'>            <AnimatedBackground />
-      {/* </div> */}
-      {cheatingDetected ? (
-        <div className="w-full h-screen flex flex-col items-center justify-center bg-red-900 text-white p-8 text-center">
-          <div className="max-w-2xl">
-            <h1 className="text-4xl font-bold mb-6">⚠️ Cheating Detected</h1>
-            <p className="text-xl mb-4">{cheatingReason}</p>
-            <p className="text-lg mb-8">The interview has been terminated due to suspicious activity.</p>
-            <button
-              onClick={() => window.location.reload()}
-              className="bg-white text-red-900 hover:bg-gray-200 px-8 py-3 rounded-lg font-medium text-lg"
-            >
-              Start New Interview
-            </button>
+    <div className='min-h-screen flex flex-col md:flex-row text-white'>
+      <AnimatedBackground />
+      
+      {/* Left Panel - Video/Content */}
+      <div className="flex-1 flex flex-col items-center p-6">
+        <div className="w-full flex justify-between items-center mb-4">
+          <h1 className="text-3xl font-bold text-blue-500">AI Interview</h1>
+          <div className="flex items-center gap-4">
+            <div className="bg-gray-800 px-4 py-2 rounded-lg text-yellow-400">
+              ⏱️ {formatTime(timeLeft)}
+            </div>
           </div>
         </div>
-      ) : (
-        <>
-          {/* Left Panel - Video/Upload */}
-          <div className="flex-1 flex flex-col items-center p-6">
-            <div className="w-full flex justify-between items-center mb-4">
-              <h1 className="text-3xl font-bold text-blue-500">AI Interview</h1>
-              <div className="flex items-center gap-4">
-                <div className="bg-gray-800 px-4 py-2 rounded-lg text-yellow-400">
-                  ⏱️ {formatTime(timeLeft)}
-                </div>
+
+        <button 
+          onClick={toggleFullscreen}
+          className="mb-4 bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg"
+        >
+          {isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+        </button>
+
+        <AIInterviewerVideo
+          text={currentContent}
+          onFeedbackComplete={phase === 'intro' ? handleIntroComplete : undefined}
+        />
+
+        {phase === 'intro' && (
+          <div className="mt-4 w-full max-w-2xl">
+            <button
+              onClick={handleIntroComplete}
+              className="w-full py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-medium"
+            >
+              Continue to First Question
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Right Panel - Conversation History */}
+      <div className="md:w-1/3 w-full flex flex-col border-l border-gray-700 h-screen">
+        <div className="p-4 bg-gray-800 border-b border-gray-700">
+          <CheatingDetection 
+            onCheatingDetected={handleCheatingDetected} 
+            disabled={cheatingDetected || phase === 'complete'}
+            onCameraReady={() => setCameraReady(true)}
+          />
+        </div>
+
+        <div className="p-4 bg-gray-900 overflow-y-auto flex-1">
+          <h2 className="text-xl font-semibold text-center mb-4 text-blue-400">
+            Interview Progress
+          </h2>
+          
+          {messages.map((msg, i) => (
+            <div key={i} className={`mb-4 ${
+              msg.type === 'answer' ? 'text-right' : 
+              msg.type === 'feedback' ? 'bg-yellow-900' : ''
+            }`}>
+              <div className={`inline-block p-4 rounded-lg max-w-[80%] ${
+                msg.type === 'question' ? 'bg-blue-900' :
+                msg.type === 'answer' ? 'bg-gray-700' :
+                msg.type === 'feedback' ? 'bg-yellow-800' :
+                msg.type === 'intro' ? 'bg-purple-900' : 'bg-gray-800'
+              }`}>
+                {msg.type === 'feedback' && msg.score && (
+                  <div className="text-xs text-yellow-300 mb-1">
+                    Score: {msg.score}/10
+                  </div>
+                )}
+                <p>{msg.content}</p>
               </div>
             </div>
+          ))}
+          <div ref={endRef} />
+        </div>
 
-            {phase === 'upload' && (
-              <div className="flex flex-col items-center justify-center h-full">
-                <h2 className="text-2xl font-bold mb-6">Upload Your Resume to Begin</h2>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  accept=".pdf,.doc,.docx"
-                  onChange={(e) => e.target.files?.[0] && handleResumeUpload(e.target.files[0])}
-                  className="hidden"
-                />
+        {/* Interaction Panel */}
+        <div className="p-4 bg-gray-800 border-t border-gray-700">
+          {apiError && (
+            <div className="mb-4 p-3 bg-red-900 text-red-100 rounded-lg">
+              {apiError}
+            </div>
+          )}
+
+          {phase === 'question' && (
+            <div className="flex flex-col gap-4">
+              <button
+                onClick={startVoiceRecording}
+                disabled={!cameraReady}
+                className="bg-purple-600 hover:bg-purple-700 px-6 py-3 rounded-lg text-lg disabled:opacity-50"
+              >
+                🎤 Start Answering
+              </button>
+              <button
+                onClick={() => setPhase('confirm')}
+                className="bg-gray-600 hover:bg-gray-700 px-6 py-3 rounded-lg text-lg"
+              >
+                ✏️ Type Answer Instead
+              </button>
+            </div>
+          )}
+
+          {phase === 'recording' && (
+            <div className="text-center py-8 animate-pulse text-yellow-300">
+              🎙️ Listening... Speak now.
+              <button
+                onClick={() => {
+                  recognitionRef.current?.stop();
+                  setPhase('confirm');
+                }}
+                className="mt-4 bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg"
+              >
+                Stop Recording
+              </button>
+            </div>
+          )}
+
+          {phase === 'confirm' && (
+            <div className="flex flex-col gap-4">
+              <textarea
+                value={answer}
+                onChange={(e) => setAnswer(e.target.value)}
+                className="w-full p-4 h-32 rounded-lg border border-gray-600 bg-gray-700 text-white"
+                placeholder="Type or edit your answer here..."
+              />
+              <div className="flex gap-4">
                 <button
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={resumeUploading}
-                  className="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg text-lg font-medium disabled:opacity-50"
-                >
-                  {resumeUploading ? 'Uploading...' : 'Select Resume'}
-                </button>
-                {apiError && (
-                  <div className="mt-4 p-3 bg-red-900 text-red-100 rounded-lg">
-                    {apiError}
-                  </div>
-                )}
-              </div>
-            )}
-  
-            {phase !== 'upload' && (
-              <>
-                <button 
-                  onClick={toggleFullscreen}
-                  className="mb-4 bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg"
-                >
-                  {isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
-                </button>
-                <AIInterviewerVideo
-                  text={phase === 'question' ? currentQuestion : ''}
-                  onFeedbackComplete={() => {
-                    if (phase === 'question') {
-                      startVoiceRecording();
-                    }
+                  onClick={() => {
+                    setPhase('question');
+                    setAnswer('');
                   }}
-                />
-              </>
-            )}
-          </div>
-  
-          {/* Right Panel - Conversation History */}
-          {phase !== 'upload' && (
-            <div className="md:w-1/3 w-full flex flex-col border-l border-gray-700 h-screen">
-              <div className="p-4 bg-gray-800 border-b border-gray-700">
-                <CheatingDetection 
-                  onCheatingDetected={handleCheatingDetected} 
-                  disabled={cheatingDetected || phase === 'complete'}
-                  onCameraReady={() => setCameraReady(true)}
-                />
-              </div>
-  
-              <div className="p-4 bg-gray-900 overflow-y-auto flex-1">
-                <h2 className="text-xl font-semibold text-center mb-4 text-blue-400">
-                  Interview Progress
-                </h2>
-                
-                {conversation.map((item, i) => (
-                  <div key={i} className="mb-6">
-                    <div className="bg-gray-800 p-4 rounded-lg">
-                      <p className="text-blue-300 font-semibold">Q: {item.question}</p>
-                      {item.answer && (
-                        <p className="text-green-300 mt-2">Your Answer: {item.answer}</p>
-                      )}
-                    </div>
-                    <hr className="border-gray-700 my-3" />
-                  </div>
-                ))}
-                <div ref={endRef} />
-              </div>
-  
-              <div className="p-4 bg-gray-800 border-t border-gray-700">
-                {apiError && (
-                  <div className="mb-4 p-3 bg-red-900 text-red-100 rounded-lg">
-                    {apiError}
-                  </div>
-                )}
-  
-                {phase === 'question' && (
-                  <div className="flex flex-col gap-4">
-                    <button
-                      onClick={startVoiceRecording}
-                      disabled={!cameraReady}
-                      className="bg-purple-600 hover:bg-purple-700 px-6 py-3 rounded-lg text-lg disabled:opacity-50"
-                    >
-                      🎤 Start Answering
-                    </button>
-                    <button
-                      onClick={() => setPhase('confirm')}
-                      className="bg-gray-600 hover:bg-gray-700 px-6 py-3 rounded-lg text-lg"
-                    >
-                      ✏️ Type Answer Instead
-                    </button>
-                  </div>
-                )}
-  
-                {phase === 'recording' && (
-                  <div className="text-center py-8 animate-pulse text-yellow-300">
-                    🎙️ Listening... Speak now.
-                    <button
-                      onClick={() => {
-                        recognitionRef.current?.stop();
-                        setPhase('confirm');
-                      }}
-                      className="mt-4 bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg"
-                    >
-                      Stop Recording
-                    </button>
-                  </div>
-                )}
-  
-                {phase === 'confirm' && (
-                  <div className="flex flex-col gap-4">
-                    <textarea
-                      value={answer}
-                      onChange={(e) => setAnswer(e.target.value)}
-                      className="w-full p-4 h-32 rounded-lg border border-gray-600 bg-gray-700 text-white"
-                      placeholder="Type or edit your answer here..."
-                    />
-                    <div className="flex gap-4">
-                      <button
-                        onClick={() => {
-                          setPhase('question');
-                          setAnswer('');
-                        }}
-                        className="flex-1 bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded-lg"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={handleSubmit}
-                        disabled={loading || !answer.trim()}
-                        className="flex-1 bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg disabled:opacity-50"
-                      >
-                        {loading ? 'Sending...' : 'Submit Answer'}
-                      </button>
-                    </div>
-                  </div>
-                )}
-  
-                {phase === 'complete' && (
-                  <div className="bg-green-900 bg-opacity-20 p-6 rounded-lg text-center border border-green-700">
-                    <h2 className="text-2xl font-bold text-green-400 mb-4">
-                      🎉 Interview Completed!
-                    </h2>
-                    <p className="text-white mb-6">
-                      You answered {conversation.filter(c => c.answer).length} questions in {formatTime(30 * 60 - timeLeft)}.
-                    </p>
-                    <button
-                      onClick={() => window.location.reload()}
-                      className="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-medium"
-                    >
-                      Start New Interview
-                    </button>
-                  </div>
-                )}
+                  className="flex-1 bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded-lg"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSubmit}
+                  disabled={loading || !answer.trim()}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg disabled:opacity-50"
+                >
+                  {loading ? 'Sending...' : 'Submit Answer'}
+                </button>
               </div>
             </div>
           )}
-        </>
-      )}
+
+{phase === 'complete' && (
+  <div className="bg-green-900 bg-opacity-20 p-6 rounded-lg text-center border border-green-700">
+    <h2 className="text-2xl font-bold text-green-400 mb-4">
+      🎉 Interview Completed!
+    </h2>
+    <p className="text-white mb-6">Your results are being generated...</p>
+    <button
+      onClick={() => navigate('/interview-results', {
+        state: {
+          // Pass any relevant data from the interview
+          sessionId,
+          messages,
+          timeSpent: formatTime(30 * 60 - timeLeft)
+        }
+      })}
+      className="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-medium"
+    >
+      View Results
+    </button>
+  </div>
+)}
+        </div>
+      </div>
     </div>
   );
-} 
+}

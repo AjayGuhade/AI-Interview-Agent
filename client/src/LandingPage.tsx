@@ -14,7 +14,7 @@ const AiInterviewPage: React.FC = () => {
        <header className="fixed top-0 w-full z-50 bg-gray-900 shadow-[0_20px_50px_rgba(8,112,184,0.3)] sticky">
         <div className="container mx-auto px-6 flex justify-between items-center">
           <div className="flex items-center gap-0">
-            <img src="/image1.png" alt="Logo" className="w-14 h-20 object-contain" />
+            <img src="/image1.png" alt="Logo" className="w-14 h-2 0 object-contain" />
             <span className="text-2xl md:text-3xl font-extrabold tracking-wide text-white mt-4">
               <span className="text-pink-600">culp</span>Trix AI
             </span>

@@ -17,6 +17,7 @@ import DriveDetails from './Manager/DriveDetails.tsx'
 import AllDrives from './Manager/AllDrives.tsx'
 import CodeEditor from './CodedEditor.tsx'
 import InterviewEntry from './InterviewEntry.tsx'
+import ResultsPage from './ResultsPage.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -24,7 +25,7 @@ createRoot(document.getElementById('root')!).render(
       <Routes>
         {/* <Route path="/" element={<App />} /> */}
         <Route path="/AiInterviewPage" element={<AiInterviewPage />} />
-        <Route path="/chat" element={<Chat />} />
+        {/* <Route path="/chat" element={<Chat />} /> */}
         <Route path="/" element={<AuthPage />} />
         {/* <Route path="/" element={<login />} /> */}
 
@@ -39,6 +40,7 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/CodeEditor" element={<CodeEditor />} />
         <Route path="/meet/:meetingId" element={<InterviewEntry />} />
         <Route path="/interview/:meetingId" element={<Chat />} />
+        <Route path="/interview-results" element={<ResultsPage />} />
 
         
       </Routes>

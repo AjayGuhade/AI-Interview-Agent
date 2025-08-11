@@ -1,5 +1,7 @@
 // import axios from 'axios';
 
+import axios from "axios";
+
 // const API = axios.create({
 //   baseURL: 'http://localhost:5050/api',
 //   withCredentials: true,
@@ -137,7 +139,16 @@ export const CompanyAPI = {
 
 // };
 export const InterviewAPI = {
-  startInterview: (data: any) => request("/interview/start", "POST", data),
+  startInterview: async (data: { applicantId: string; driveId: string }) => {
+    const response = await axios.post(`${BASE_URL}/interview-bot/start`, data);
+    return response.data;
+  },
+
+  respondToQuestion: async (data: { sessionId: string; answer: string }) => {
+    const response = await axios.post(`${BASE_URL}/interview-bot/respond`, data);
+    return response.data;
+  },
+  // startInterview: (data: any) => request("/interview/start", "POST", data),
   submitAnswer: (data: any) => request("/interview/answer", "POST", data),
   uploadResume: async (file: File) => {
     const formData = new FormData();
@@ -194,4 +205,8 @@ export const ApplicantAPI = {
     request(`/applicant/by-meeting/${meetingId}`, "GET"),
   getApplicantsByDrive: (driveId: string) =>
     request(`/applicants/byRecruitmentDrive/${driveId}`, "GET"),
+  getByMeetingId2: async (meetingId: string) => {
+    const response = await axios.get(`${BASE_URL}/applicant/meeting/${meetingId}`);
+    return response.data;
+  }
 };
