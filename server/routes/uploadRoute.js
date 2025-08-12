@@ -198,7 +198,7 @@ router.post("/upload", upload.array("resumes"), async (req, res) => {
           Referance: "CompanyURL",
           IsApplicable: true,
           InterviewStatus: "Pending",
-          MeetingLink: `https://meet.sculptortech.ai/${uuidv4()}`,
+          MeetingLink: `http://56.152.66.148.host.secureserver.net:8000/meet/${uuidv4()}`,
           MeetingStartDate: EstimateStartDate,
           MeetingEndDate: EstimateEndDate
         });

@@ -53,9 +53,11 @@ const InterviewEntry = () => {
         state: {
           sessionId: response.sessionId,
           initialMessages: response.messages,
-          applicantData: applicant
+          applicantData: applicant,
+          applicantId: applicant._id // ✅ add this
         }
       });
+      
     } catch (err) {
       setError("Failed to start interview session. Please try again.");
       setStartingInterview(false);

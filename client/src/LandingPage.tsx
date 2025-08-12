@@ -1,20 +1,27 @@
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import LoginPopup from "./LoginPopup";
+// import LoginPopup from "./LoginPopup";
  
 const AiInterviewPage: React.FC = () => {
   const navigate = useNavigate();
+  const [showLogin, setShowLogin] = useState(false);
  
- const handleStartClick = () => {
+  const handleStartClick = () => {
     navigate("/chat");
   };
  
   return (
     <div className="font-inter bg-gradient-to-br from-white via-blue-90 to-blue-700 text-gray-900">
       {/* Navbar */}
-       <header className="fixed top-0 w-full z-50 bg-gray-900 shadow-[0_20px_50px_rgba(8,112,184,0.3)] sticky">
+      <header className="fixed top-0 w-full z-50 bg-gray-900 shadow-[0_20px_50px_rgba(8,112,184,0.3)] sticky">
         <div className="container mx-auto px-6 flex justify-between items-center">
           <div className="flex items-center gap-0">
-            <img src="/image1.png" alt="Logo" className="w-14 h-2 0 object-contain" />
+            <img
+              src="/image1.png"
+              alt="Logo"
+              className="w-14 h-20 object-contain"
+            />
             <span className="text-2xl md:text-3xl font-extrabold tracking-wide text-white mt-4">
               <span className="text-pink-600">culp</span>Trix AI
             </span>
@@ -23,21 +30,38 @@ const AiInterviewPage: React.FC = () => {
             <a href="#home" className="text-white hover:text-blue-600 transition">Home</a>
             <a href="#about" className="text-white hover:text-blue-600 transition">About</a>
             <a href="#products" className="text-white hover:text-blue-600 transition">Products</a>
+            <a href="#report" className="text-white hover:text-blue-600 transition">Report</a>
+            <a href="#testimonials" className="text-white hover:text-blue-600 transition">Testimonials</a>
             <a href="#contact" className="text-white hover:text-blue-600 transition">Contact</a>
-            <a
-              href="#"
-              className="bg-blue-600 hover:bg-blue-700 text-white py-1 px-4 rounded-full transition text-sm"
-            >
-              FAQ
-            </a>
+            {/* <a href="#clients" className="text-white hover:text-blue-600 transition">Clients</a> */}
+            <button
+              // onClick={() => setShowLogin(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white py-1 px-4 rounded-full transition text-sm">
+              Login
+            </button>
           </nav>
         </div>
       </header>
- 
-      {/* Hero Section */}
-     <section id="home"
-    className="relative min-h-screen flex items-center justify-center text-white bg-black overflow-hidden px-4 md:px-12 py-16">
-   {/* Background Effects */}
+     
+      {/* Login Popup */}
+      {/* {showLogin && (
+        <div className="fixed inset-0  bg-opacity-70 flex items-center justify-center z-50">
+          <div className="bg-white w-full max-w-sm p-8 rounded-xl shadow-xl relative">
+            <button
+              onClick={() => setShowLogin(false)}
+              className="absolute top-2 right-2 text-gray-500 hover:text-black text-2xl font-bold"
+            >
+              ×
+            </button>
+            <LoginPopup onClose={() => setShowLogin(false)} />
+          </div>
+        </div>
+      )} */}
+   
+     {/* Hero Section */}
+      <section id="home"
+  className="relative min-h-screen flex items-center justify-center text-white bg-black overflow-hidden px-4 md:px-12 py-20">
+  {/* Background Effects */}
   <div className="absolute inset-0 z-0">
     <div className="absolute w-full h-full bg-black opacity-60" />
     <div className="stars" />
@@ -45,38 +69,82 @@ const AiInterviewPage: React.FC = () => {
     <div className="moon-glow" />
   </div>
  
-  {/* Content */}
-  <div className="relative z-10 max-w-6xl w-full grid grid-cols-1 md:grid-cols-2 items-center gap-8">
-    {/* Left: Text */}
-    <div className="text-left px-4 md:px-4">
-      <h1 className="text-4xl md:text-6xl font-extrabold leading-tight mb-4">
-        Welcome to <span className="text-[#1e3a8a]">SculpTrix AI</span>
-      </h1>
-      <p className="text-lg md:text-xl mb-8 max-w-xl">
-        Empowering intelligent interviews & seamless reporting through advanced AI.
-      </p>
-      <button className="bg-[#1e3a8a] hover:bg-pink-700 text-white px-6 py-3 rounded-full text-lg font-semibold transition-all duration-300 shadow-lg">
-        Start Interview
-      </button>
-    </div>
- 
-    {/* Right: Robot Image */}
-    <div className="flex justify-center md:justify-end px-5 md:px-0 animate-fade-in-up">
+  {/* Main Content */}
+  <div className="relative z-10 max-w-6xl w-full grid grid-cols-1 md:grid-cols-2 items-start gap-10">
+    {/* Left: Robot Image */}
+    <div className="flex justify-center md:justify-start px-2 md:px-0 animate-fade-in-up mt-10">
       <img
         src="img/robot1.png"
         alt="AI Robot"
         className="max-w-[500px] w-full hover:scale-105 transition-transform duration-500"
       />
     </div>
+ 
+    {/* Right: Card with Heading + Compact Form */}
+    <div className="w-full max-w-[460px] max-h-[700px] mt-18 px-4 md:px-10">
+      <div className="border-l-[6px] border-blue-500 bg-gray-900 backdrop-blur-sm text-white shadow-xl p-5 rounded-xl">
+        {/* Heading inside card */}
+        <h1 className="text-2xl md:text-2xl font-bold text-center text-white mb-4">
+          Welcome to <span className="text-[#1e3a8a]">SculpTrix AI</span>
+        </h1>
+ 
+        {/* Compact Form */}
+        <form className="space-y-6 text-sm">
+          <div className="grid grid-cols-2 gap-5">
+            <input
+              type="text"
+              placeholder="First name"
+              className="w-full border border-gray-300 px-3 py-1.5 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <input
+              type="text"
+              placeholder="Last name"
+              className="w-full border border-gray-300 px-3 py-1.5 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+ 
+          <input
+            type="email"
+            placeholder="Email address"
+            className="w-full border border-gray-300 px-3 py-1.5 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+ 
+          <input
+            type="password"
+            placeholder="Password"
+            className="w-full border border-gray-300 px-3 py-1.5 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+ 
+          <input
+            type="password"
+            placeholder="Confirm password"
+            className="w-full border border-gray-300 px-3 py-1.5 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+ 
+          <button
+            type="submit"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-md font-semibold transition text-sm"
+          >
+            Register
+          </button>
+ 
+          <p className="text-center text-gray-400 text-xs mt-2">
+            Already have an account?{' '}
+            <span className="text-blue-500 hover:underline cursor-pointer">Login</span>
+          </p>
+        </form>
+      </div>
+    </div>
   </div>
-     </section>
+    </section>
+ 
+ 
  
          {/* about section */}
-     <section id="about"
-   className="relative bg-gradient-to-br from-gray-900 via-black to-gray-800 text-white py-24 px-6 md:px-12 overflow-hidden">
+     <section id="about" className="relative bg-gradient-to-br from-gray-900 via-black to-gray-800 text-white py-24 px-6 md:px-12 overflow-hidden">
   {/* Animated background shapes */}
   <div className="absolute top-0 left-0 w-full h-full z-0 overflow-hidden">
-    <div className="absolute top-35 left-15 w-50 h-50 bg-gray-800 rounded-full opacity-20 animate-pulse"></div>
+    <div className="absolute top-22 left-7 w-50 h-50 bg-gray-800 rounded-full opacity-20 animate-pulse"></div>
     <div className="absolute bottom-60 left-140 right-50 w-40 h-40 bg-gray-600 rounded-full opacity-20 animate-ping"></div>
     <div className="absolute bottom-10 right-10 w-60 h-60 bg-gray-600 rounded-full opacity-20 animate-ping"></div>
     <div className="absolute top-30 right-40 w-30 h-30 bg-gray-400 rounded-full opacity-15 animate-bounce"></div>
@@ -84,7 +152,7 @@ const AiInterviewPage: React.FC = () => {
  
   {/* Heading */}
   <div className="text-center mb-5 relative z-10">
-    <h2 className="text-4xl md:text-3xl font-extrabold text-white mb-4">
+    <h2 className="text-4xl md:text-3xl font-extrabold text-white mb-2">
       ABOUT US
     </h2>
     <div className="w-24 h-1 bg-blue-500 mx-auto mt-1"></div>
@@ -93,11 +161,11 @@ const AiInterviewPage: React.FC = () => {
   {/* Content */}
   <div className="relative z-10 max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-10">
     {/* Image */}
-    <div className="w-full md:w-1/2 h-100  flex justify-center md:justify-start">
+    <div className="w-full md:w-1/2 h-100 rounded-3xl flex justify-center md:justify-start">
       <img
-        src="/img/AI_img2.png"
+        src="/img/images (2).jpg"
         alt="About Illustration"
-        className="w-[90%] max-w-[500px] h-auto shadow-5x2 hover:scale-105 transition-transform duration-700"
+        className="w-[90%] max-w-[500px] h-auto rounded-3xl shadow-5x2  hover:scale-105 transition-transform duration-700"
       />
     </div>
  
@@ -117,15 +185,15 @@ const AiInterviewPage: React.FC = () => {
      </section>
  
       {/* Products Section */}
-    <section id="products" className="bg-gradient-to-br from-gray-800 to-gray-800 py-20 px-6 md:px-20">
-  <div className="max-w-7xl mx-auto">
+    <section id="products" className="bg-gradient-to-br from-gray-900 to-gray-900 py-20 px-6 md:px-20">
+    <div className="max-w-7xl mx-auto">
     {/* Section Header */}
     <div className="text-center mb-16">
       <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">
         OUR PRODUCTS
       </h2>
-      <div className="w-24 h-1 bg-blue-800 mx-auto mt-1"></div>
-      <p className="text-gray-300 max-w-3xl mx-auto text-lg">
+      <div className="w-24 h-1 bg-blue-800 mx-auto"></div>
+      <p className="text-gray-300 max-w-3xl mx-auto text-lg mt-2">
         Discover intelligent tools that streamline interview preparation, analysis, and skill improvement.
       </p>
     </div>
@@ -193,6 +261,111 @@ const AiInterviewPage: React.FC = () => {
     </div>
   </div>
     </section>
+ 
+   {/* Our Clients Section */}
+      {/* <section id="clients" className="bg-gray-800 text-white py-20 px-6 md:px-20">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl md:text-4xl font-bold mb-4">Our Clients</h2>
+          <div className="w-24 h-1 bg-blue-500 mx-auto mt-1"></div>
+        </div>
+        <div className="flex flex-wrap justify-center gap-10 max-w-6xl mx-auto">
+          {["/img/client1.png", "/img/client2.png", "/img/client3.png"].map((logo, idx) => (
+            <img key={idx} src={logo} alt={`Client ${idx + 1}`} className="h-20 grayscale hover:grayscale-0 transition-all" />
+          ))}
+        </div>
+      </section> */}
+ 
+    <section id="report" className="bg-gray-900 py-30 px-6 md:px-20">
+  <div className="text-center mb-12">
+    <h2 className="text-3xl md:text-4xl font-bold text-gray-200 mb-4">AI-Generated Reports</h2>
+    <div className="w-24 h-1 bg-blue-500 mx-auto mt-1"></div>
+    <p className="text-gray-200 max-w-2xl mx-auto mt-4">
+      Get detailed, actionable insights about candidates. Our AI analyzes behavior, speech, and skills to give you accurate evaluation reports in seconds.
+    </p>
+  </div>
+ 
+  <div className="grid md:grid-cols-3 gap-10 max-w-6xl mx-auto">
+    {/* Report Card 1 */}
+    <div className="bg-slate-300 p-6 rounded-xl shadow hover:shadow-xl transition">
+      <h3 className="text-xl font-semibold text-blue-700 mb-2">Skill Analysis</h3>
+      <p className="text-gray-700 text-sm mb-3">
+        Evaluate candidate’s technical and soft skills with visual charts and AI-driven feedback.
+      </p>
+      <img
+        src="/img/skill-chart.png"
+        alt="Skill Analysis"
+        className="w-full rounded-md mt-2"
+      />
+    </div>
+ 
+    {/* Report Card 2 */}
+    <div className="bg-slate-400 p-6 rounded-xl shadow hover:shadow-xl transition">
+      <h3 className="text-xl font-semibold text-blue-900 mb-2">Behavior Report</h3>
+      <p className="text-gray-700 text-sm mb-3">
+        Behavioral insights including confidence, tone, and professionalism based on AI detection.
+      </p>
+      <img
+        src="/img/behavior-report.png"
+        alt="Behavioral Report"
+        className="w-full rounded-md mt-2"
+      />
+    </div>
+ 
+    {/* Report Card 3 */}
+    <div className="bg-slate-700 p-6 rounded-xl shadow hover:shadow-xl transition">
+      <h3 className="text-xl font-semibold text-blue-700 mb-2">Summary & Suggestions</h3>
+      <p className="text-gray-300 text-sm mb-3">
+        Final summary with strengths, improvement areas, and AI suggestions for next steps.
+      </p>
+      <img
+        src="/img/summary.png"
+        alt="Report Summary"
+        className="w-full rounded-md mt-2"
+      />
+    </div>
+  </div>
+    </section>
+ 
+ 
+      {/* Testimonials Section */}
+      <section id="testimonials" className="bg-gray-900 text-white py-20 px-6 md:px-20">
+  <div className="text-center mb-12">
+    <h2 className="text-3xl md:text-4xl font-bold mb-4">Testimonials</h2>
+    <div className="w-24 h-1 bg-blue-500 mx-auto mt-1"></div>
+  </div>
+ 
+  <div className="grid md:grid-cols-2 gap-10 max-w-6xl mx-auto">
+    {[
+      {
+        name: "Amit Sharma",
+        feedback: "SculpTrix AI transformed our hiring process completely!",
+        company: "HR Manager, TechNova"
+      },
+      {
+        name: "Riya Desai",
+        feedback: "The AI interviewer helped me land my dream job.",
+        company: "Frontend Developer"
+      },
+      {
+        name: "Kunal Patil",
+        feedback: "We saved hours on each candidate evaluation — brilliant system!",
+        company: "Talent Head, CodeWorks"
+      },
+      {
+        name: "Sneha Mehta",
+        feedback: "Very intuitive and efficient. The AI mimicked a real interview perfectly.",
+        company: "Software Engineer, InnovateX"
+      }
+    ].map((t, idx) => (
+      <div key={idx} className="bg-gray-800 p-6 rounded-xl shadow-lg border border-gray-700">
+        <p className="italic text-gray-300 mb-4">"{t.feedback}"</p>
+        <h4 className="text-lg font-bold text-blue-400">{t.name}</h4>
+        <p className="text-sm text-gray-400">{t.company}</p>
+      </div>
+    ))}
+  </div>
+     </section>
+ 
  
       {/* Contact Section */}
         <section id="contact"className="relative bg-cover bg-center bg-no-repeat py-20 px-6 md:px-20"
@@ -270,7 +443,7 @@ const AiInterviewPage: React.FC = () => {
   />
 </a>
  
-  </section>
+       </section>
  
  
       {/* Footer */}
@@ -347,8 +520,11 @@ const AiInterviewPage: React.FC = () => {
  
  
     `}</style>
+    {showLogin && <LoginPopup onClose={() => setShowLogin(false)} />}
   </div>
   );
 };
  
 export default AiInterviewPage;
+ 
+ 

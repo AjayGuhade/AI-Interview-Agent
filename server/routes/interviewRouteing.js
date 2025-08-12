@@ -6,7 +6,7 @@ const Applicant = require('../databaseModels/Applicant');
 router.get('/by-meeting/:meetingId', async (req, res) => {
   try {
     const { meetingId } = req.params;
-    const fullLink = `https://meet.sculptortech.ai/${meetingId}`;
+    const fullLink = `http://56.152.66.148.host.secureserver.net:8000/meet/${meetingId}`;
 
     const applicant = await Applicant.findOne({ MeetingLink: fullLink });
 

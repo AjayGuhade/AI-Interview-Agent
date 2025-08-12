@@ -1,5 +1,4 @@
 const mongoose = require('mongoose');
-
 const questionAnswerSchema = new mongoose.Schema({
   QuestionAnswerID: {
     type: mongoose.Schema.Types.ObjectId,
@@ -32,7 +31,12 @@ const questionAnswerSchema = new mongoose.Schema({
     type: Number,
     min: 0,
     max: 10
+  },
+  Timestamp: {
+    type: Date,
+    default: Date.now
   }
 });
+
 
 module.exports = mongoose.model('QuestionAnswer', questionAnswerSchema);

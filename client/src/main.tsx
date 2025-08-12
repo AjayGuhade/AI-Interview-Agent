@@ -24,9 +24,9 @@ createRoot(document.getElementById('root')!).render(
     <Router>
       <Routes>
         {/* <Route path="/" element={<App />} /> */}
-        <Route path="/AiInterviewPage" element={<AiInterviewPage />} />
+        <Route path="/login" element={<AuthPage />} />
         {/* <Route path="/chat" element={<Chat />} /> */}
-        <Route path="/" element={<AuthPage />} />
+        <Route path="/" element={<AiInterviewPage />} />
         {/* <Route path="/" element={<login />} /> */}
 
         <Route path="/avatar" element={<AvatarViewer />} />

@@ -189,18 +189,23 @@ router.post('/respond', async (req, res) => {
 
     // Store in database
     const qaRecord = new QuestionAnswer({
-      InterviewID: sessionId,
-      ApplicantID: session.applicantId,
+      InterviewID: new mongoose.Types.ObjectId(sessionId),
+      ApplicantID: new mongoose.Types.ObjectId(session.applicantId),
       Question: currentQA.question,
       Answer: answer,
       FeedbackOnAnswer: humanResponse.feedback,
       Score: humanResponse.score,
       Timestamp: new Date()
     });
-    await qaRecord.save();
-
+    
+    await qaRecord.save().then(() => {
+      console.log("✅ QA saved successfully");
+    }).catch(err => {
+      console.error("❌ Failed to save QA record:", err);
+    });
+    
     // Check if interview should continue (max 10 questions)
-    if (session.conversation.length >= 10) {
+    if (session.conversation.length >= 5) {
       activeSessions.delete(sessionId);
       await Applicant.findByIdAndUpdate(session.applicantId, { 
         InterviewStatus: 'Completed',

@@ -21,6 +21,8 @@ const Applicant = require('./databaseModels/Applicant'); // Adjust path as neede
 const interviewBotRoutes = require('./routes/interviewBotRoutes'); // Add this line
 
 const interviewRouting = require('./routes/interviewRouteing');
+const reportRoutes = require("./routes/generate-report");
+const generateReportRoutes = require('./routes/generate-report'); // adjust path if needed
 
 const app = express();
 
@@ -86,7 +88,9 @@ app.use("/uploads", express.static("uploads"));
 app.use('/api/applicant', interviewRouting);
 app.use('/api/interview-bot', interviewBotRoutes); // Add this line for interview bot routes
 
+app.use("/api/reports", reportRoutes);
 
+app.use('/api', generateReportRoutes);
 
 
 

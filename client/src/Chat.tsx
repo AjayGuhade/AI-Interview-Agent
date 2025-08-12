@@ -47,6 +47,11 @@ export default function Chat() {
       setSessionId(location.state.sessionId);
       setMessages(location.state.initialMessages);
       
+      // Store applicantId if present
+      if (location.state?.applicantId) {
+        console.log("Applicant ID in Chat:", location.state.applicantId);
+      }
+      
       const introMessage = location.state.initialMessages.find(
         (m: Message) => m.type === 'intro'
       );
@@ -57,6 +62,7 @@ export default function Chat() {
       }
     }
   }, [location.state]);
+  
 
   // Load face detection models
   useEffect(() => {
@@ -429,25 +435,27 @@ export default function Chat() {
             </div>
           )}
 
-{phase === 'complete' && (
+  {phase === 'complete' && (
   <div className="bg-green-900 bg-opacity-20 p-6 rounded-lg text-center border border-green-700">
     <h2 className="text-2xl font-bold text-green-400 mb-4">
       🎉 Interview Completed!
     </h2>
     <p className="text-white mb-6">Your results are being generated...</p>
     <button
-      onClick={() => navigate('/interview-results', {
-        state: {
-          // Pass any relevant data from the interview
-          sessionId,
-          messages,
-          timeSpent: formatTime(30 * 60 - timeLeft)
-        }
-      })}
-      className="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg font-medium"
-    >
-      View Results
-    </button>
+  onClick={() => navigate('/interview-results', {
+    state: {
+      sessionId,
+      messages,
+      timeSpent: formatTime(30 * 60 - timeLeft),
+      interviewType: location.state?.interviewType || 'Technical',
+      applicantName: location.state?.applicantName || '',
+      applicantId: location.state?.applicantId || '' // ✅ Pass it here
+    }
+  })}
+>
+  View Results
+</button>
+
   </div>
 )}
         </div>
