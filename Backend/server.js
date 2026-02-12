@@ -10,7 +10,7 @@ app.use(cors());
 app.use(express.json());
 
 // MongoDB URI and Database
-const mongoURI = 'mongodb://localhost:27017';
+const mongoURI = process.env.MONGO_URI || 'mongodb://mongo:27017';
 const dbName = 'ai-interview';
 const collectionName = 'users';
 
